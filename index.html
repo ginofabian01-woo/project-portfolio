@@ -83,13 +83,16 @@
     height:84px;
   }
   .brand{
+    position:relative;
+    display:inline-block;
     font-weight:700;
     font-size:15px;
     letter-spacing:0.08em;
     text-transform:uppercase;
     font-family: Georgia, "Times New Roman", serif;
   }
-  .brand span{ color:var(--ink-dim); font-weight:400; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  /* .brand-suffix content is rewritten every animation frame by the
+     scramble script while transitioning between "Giuliano" and "Gino". */
   .navlinks{
     display:flex;
     gap:36px;
@@ -163,31 +166,86 @@
     align-items:center;
     justify-content:center;
     height:min(60vh, 520px);
+    perspective:1000px;
+    /* JS sets --sx/--sy (scroll-driven fall + sway) and --op (fade) every
+       animation frame, read straight off window.scrollY — no CSS transition
+       on transform here on purpose, so the fall never lags the scrollbar in
+       either direction. Defaults keep the stage resting/centered/visible if
+       JS never runs. Decorative only — never intercepts clicks, since it
+       travels down over the page content as it falls. */
+    --sx:0px; --sy:0px; --op:1;
+    transform: translate3d(var(--sx), var(--sy), 0);
+    opacity: var(--op);
+    will-change: transform, opacity;
+    pointer-events:none;
+  }
+  .moon-parallax{
+    position:relative;
+    /* JS sets --px/--py (cursor-drift parallax), already manually eased
+       frame-by-frame in JS, so no CSS transition is added here either. */
+    --px:0px; --py:0px;
+    transform: translate3d(var(--px), var(--py), 0);
+    will-change: transform;
   }
   .moon{
+    position:relative;
     width:min(46vw, 340px);
     height:min(46vw, 340px);
     border-radius:50%;
     background:
+      /* fine surface texture — subtle craters so it reads as an object, not a flat disc */
+      radial-gradient(circle at 25% 60%, rgba(0,0,0,0.10) 0%, transparent 3.5%),
+      radial-gradient(circle at 68% 74%, rgba(0,0,0,0.08) 0%, transparent 3%),
+      radial-gradient(circle at 72% 40%, rgba(0,0,0,0.07) 0%, transparent 2.2%),
+      radial-gradient(circle at 45% 78%, rgba(0,0,0,0.06) 0%, transparent 4%),
+      radial-gradient(circle at 55% 22%, rgba(255,255,255,0.10) 0%, transparent 6%),
       radial-gradient(circle at 38% 32%, rgba(255,252,240,0.92), rgba(226,218,196,0.55) 22%, rgba(180,170,145,0.32) 45%, rgba(90,84,68,0.16) 70%, rgba(20,18,14,0) 100%),
       radial-gradient(circle at 60% 65%, rgba(0,0,0,0.3), transparent 40%),
       radial-gradient(circle at 30% 70%, rgba(0,0,0,0.22), transparent 35%),
       #d6cfba;
     box-shadow: 0 0 90px 14px rgba(185,143,74,0.14), 0 0 180px 60px rgba(146,168,116,0.11), 0 0 240px 90px rgba(233,226,209,0.04);
     animation: drift 14s ease-in-out infinite;
+    transform-style: preserve-3d;
   }
   @keyframes drift{
-    0%,100%{ transform: translateY(0); }
-    50%{ transform: translateY(-14px); }
+    0%,100%{ transform: translateY(0) rotateZ(0deg); }
+    50%{ transform: translateY(-14px) rotateZ(0.6deg); }
   }
-  .coord-tag{
-    position:absolute;
-    bottom:6px;
-    right:0;
-    text-align:right;
+  @media (prefers-reduced-motion: reduce){
+    .moonstage, .moon-parallax{ transition:none !important; transform:none !important; }
+    .light-cast{ display:none !important; }
+    h1, h2, h3, p, .mono, a{ filter:none !important; text-shadow:none !important; }
   }
-  .coord-tag .mono{ display:block; }
-  .coord-tag .mono + .mono{ margin-top:4px; }
+  /* The moon as a literal light source: an ambient glow travels with it
+     (screen-blended so it only ever brightens, never darkens), and nearby
+     text (headline, nav links) additionally brightens the closer the moon
+     currently is, via --lit (0..1) set per-element in JS every frame. */
+  .light-cast{
+    position:fixed;
+    top:0; left:0;
+    width:1000px; height:1000px;
+    margin-left:-500px; margin-top:-500px;
+    border-radius:50%;
+    background: radial-gradient(circle,
+      rgba(233,226,209,0.16) 0%,
+      rgba(185,143,74,0.11) 28%,
+      rgba(146,168,116,0.06) 52%,
+      rgba(0,0,0,0) 74%);
+    mix-blend-mode: screen;
+    pointer-events:none;
+    z-index:250; /* above the header (200) so the glow visibly washes over
+                    the nav-link text too, not just the headline; still below
+                    the vignette (400) and grain (500) overlays on top of everything */
+    will-change: transform;
+  }
+  /* Applies to every real body of text on the site (headings, paragraphs,
+     mono labels, links/buttons) — the moon's light is meant to reach
+     whatever text it currently passes near, not just the hero headline. */
+  h1, h2, h3, p, .mono, a{
+    --lit:0;
+    filter: brightness(calc(1 + var(--lit) * 0.55));
+    text-shadow: 0 0 calc(var(--lit) * 20px) rgba(215,171,99, calc(var(--lit) * 0.65));
+  }
 
   @media (max-width:900px){
     .hero .wrap{ grid-template-columns:1fr; }
@@ -363,7 +421,9 @@
 
 <header>
   <nav class="wrap">
-    <div class="brand">Edmund Giuliano <span>/ Gino</span></div>
+    <div class="brand" aria-label="Edmund Giuliano">
+      <span class="brand-prefix" aria-hidden="true">Edmund </span><span class="brand-suffix" aria-hidden="true">Giuliano</span>
+    </div>
     <div class="navlinks">
       <a href="#work">Work</a>
       <a href="#about">About</a>
@@ -377,22 +437,21 @@
   <div class="wrap">
     <div>
       <span class="mono eyebrow">Freelance Developer — Designer — Milwaukee</span>
-      <h1 class="headline">Built with<br><span class="dim">intention,</span><br>not decoration.</h1>
-      <p class="lede">I design and build small, dependable websites for people who'd rather spend their time running their business than managing a site. This is a working record of that — and of everything else I'm building, shooting, and paying attention to.</p>
+      <h1 class="headline">Built from ideas.<br>Manifested through engineering.</h1>
+      <p class="lede">I design and build small, dependable websites for people who'd rather spend their time running their business than managing a site. I'm also an AI builder and creator — I write thoughtful, structured prompts that carry an idea from discovery all the way to an innovative design. This is a working record of both — and of everything else I'm building, shooting, and paying attention to.</p>
       <div class="cta-row">
         <a href="#work" class="btn primary">View Selected Work</a>
         <a href="#contact" class="btn ghost">Get in Touch</a>
       </div>
     </div>
     <div class="moonstage">
-      <div class="moon" role="img" aria-label="Placeholder render standing in for Gino's own moon photograph, to be swapped in once the source file is uploaded"></div>
-      <div class="coord-tag">
-        <span class="mono">Own capture — handheld</span>
-        <span class="mono">Placeholder render — swap for source photo</span>
+      <div class="moon-parallax">
+        <div class="moon" role="img" aria-label="Placeholder render standing in for a personal moon photograph, to be swapped in once the source file is uploaded"></div>
       </div>
     </div>
   </div>
 </section>
+<div class="light-cast" aria-hidden="true"></div>
 
 <section id="work">
   <div class="wrap">
@@ -494,6 +553,167 @@
     });
   }, { threshold: 0.15 });
   document.querySelectorAll('.reveal').forEach(el=> io.observe(el));
+
+  // Make the moon feel present in space: it drifts toward the cursor (subtle
+  // parallax), rains gently down the entire length of the page as you scroll
+  // (not just the hero — all the way through Work/About/Contact to the
+  // bottom), and casts a literal light that brightens the headline and nav
+  // links the closer it gets. Skipped entirely for prefers-reduced-motion,
+  // and everything defaults to 0/centered/unlit via CSS custom properties if
+  // this never runs at all.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const moonstage = document.querySelector('.moonstage');
+  const moonParallax = document.querySelector('.moon-parallax');
+  const moonEl = document.querySelector('.moon');
+  const heroEl = document.querySelector('.hero');
+  const lightCast = document.querySelector('.light-cast');
+  // Every real piece of copy on the site, not just the hero headline — the
+  // brand name is excluded since it already has its own scramble treatment,
+  // but the ambient light-cast overlay still washes over it visually.
+  const lightables = Array.from(document.querySelectorAll('h1, h2, h3, p, .mono, a'))
+    .filter((el) => !el.closest('.brand'));
+
+  if (moonstage && moonParallax && heroEl && !reduceMotion) {
+    let targetX = 0, targetY = 0, curX = 0, curY = 0;
+    const MAX_PARALLAX = 18; // px of travel at the extreme edge of the hero
+
+    heroEl.addEventListener('mousemove', (e) => {
+      const r = heroEl.getBoundingClientRect();
+      const nx = (e.clientX - r.left) / r.width - 0.5;   // -0.5..0.5
+      const ny = (e.clientY - r.top) / r.height - 0.5;
+      targetX = nx * MAX_PARALLAX * 2;
+      targetY = ny * MAX_PARALLAX;
+    });
+    heroEl.addEventListener('mouseleave', () => { targetX = 0; targetY = 0; });
+
+    // Rain/waterfall tuning: FALL_RATIO is how fast the moon sinks down the
+    // page relative to raw scroll distance (recomputed against total page
+    // height every frame, so it automatically keeps working as more content
+    // is added, and always ends near the bottom of the page). No easing is
+    // applied to the scroll-driven fall/sway/light itself — it's read fresh
+    // from window.scrollY on every single animation frame, so it tracks the
+    // scrollbar immediately in both directions with zero added lag.
+    // NOTE: this needs to be *slightly above* 1, not below it. Scrolling the
+    // page up by X naturally carries the moon up by X too (it's not a fixed
+    // overlay, it lives in normal document flow); FALL_RATIO has to overcome
+    // that upward carry AND add real downward travel on top, or the moon
+    // just scrolls off the top of the screen instead of sinking through the
+    // page. ~1.15 keeps it on-screen the whole way and resting low by the
+    // time the page ends.
+    const FALL_RATIO = 1.15;
+    const SWAY_AMPLITUDE = 34;    // px of left-right travel at full swing
+    const SWAY_CYCLES = 6;        // left-right swings across the whole page
+    const MIN_OPACITY = 0.42;     // floor so it stays present through Work/About/Contact
+    const FADE_END_PROGRESS = 0.3; // fraction of the page by which opacity hits its floor
+    const LIGHT_REACH = 620;      // px radius over which the moon's light falls off to 0
+
+    function tick() {
+      // ease toward the cursor target so it drifts rather than snaps
+      curX += (targetX - curX) * 0.06;
+      curY += (targetY - curY) * 0.06;
+      moonParallax.style.setProperty('--px', curX.toFixed(2) + 'px');
+      moonParallax.style.setProperty('--py', curY.toFixed(2) + 'px');
+
+      // Whole-page rain: progress is 0 at the top of the document and 1 at
+      // the very bottom, so the fall continues through every section, not
+      // just the hero.
+      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
+
+      const fall = progress * maxScroll * FALL_RATIO;
+      const sway = Math.sin(progress * SWAY_CYCLES * Math.PI * 2) * SWAY_AMPLITUDE * Math.min(progress * 3, 1);
+      const fadeProgress = Math.min(progress / FADE_END_PROGRESS, 1);
+      const fade = 1 - fadeProgress * (1 - MIN_OPACITY);
+
+      moonstage.style.setProperty('--sy', fall.toFixed(1) + 'px');
+      moonstage.style.setProperty('--sx', sway.toFixed(1) + 'px');
+      moonstage.style.setProperty('--op', fade.toFixed(2));
+
+      // Light-cast: read the moon's real on-screen position (not the target
+      // variables) so the light always matches exactly what's rendered, then
+      // brighten every piece of text on the page based on its live distance
+      // to it — nearby copy glows brighter, distant copy stays untouched.
+      if (moonEl && lightCast) {
+        const moonRect = moonEl.getBoundingClientRect();
+        const mx = moonRect.left + moonRect.width / 2;
+        const my = moonRect.top + moonRect.height / 2;
+        lightCast.style.transform = `translate3d(${mx.toFixed(1)}px, ${my.toFixed(1)}px, 0)`;
+        lightables.forEach((el) => {
+          const r = el.getBoundingClientRect();
+          const ex = r.left + r.width / 2, ey = r.top + r.height / 2;
+          const dist = Math.hypot(mx - ex, my - ey);
+          const lit = Math.max(0, 1 - dist / LIGHT_REACH);
+          el.style.setProperty('--lit', lit.toFixed(3));
+        });
+      }
+
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // Header name: "Giuliano" scrambles down to "Gino" once scrolled, and
+  // scrambles back the moment the user scrolls back to the top. "Edmund "
+  // never changes, so only the suffix span is touched. Screen readers always
+  // get the static "Edmund Giuliano" aria-label on the container — the
+  // scrambling text itself is aria-hidden noise, not real content.
+  const headerEl = document.querySelector('header');
+  const suffixEl = document.querySelector('.brand-suffix');
+  // Trigger point is the midpoint of the whole page's scroll range, not a
+  // small fixed pixel offset near the top — the scramble should fire once,
+  // as a single motion, when the user reaches "mid field" of the site.
+  const MID_FIELD_RATIO = 0.5;
+  const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const FULL_NAME = 'Giuliano';
+  const SHORT_NAME = 'Gino';
+  const SCRAMBLE_DURATION = 2200; // 1x slower again (original 550ms -> 1100ms -> 2200ms)
+  const reduceMotionBrand = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function scrambleTo(el, targetWord, maxLen, duration) {
+    if (!el) return;
+    const target = targetWord.padEnd(maxLen, ' '); // ' ' marks "no character here"
+    if (reduceMotionBrand) {
+      el.textContent = targetWord;
+      return;
+    }
+    if (el._scrambleRaf) cancelAnimationFrame(el._scrambleRaf);
+    const start = performance.now();
+    function frame(now) {
+      const elapsed = now - start;
+      let out = '';
+      for (let i = 0; i < maxLen; i++) {
+        const revealAt = (i / maxLen) * duration * 0.6;
+        const finalChar = target[i] === ' ' ? '' : target[i];
+        if (elapsed >= revealAt + duration * 0.4) {
+          out += finalChar;
+        } else if (elapsed >= revealAt && finalChar === '') {
+          out += ''; // this slot has already resolved to "removed"
+        } else {
+          out += SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }
+      }
+      el.textContent = out;
+      if (elapsed < duration) {
+        el._scrambleRaf = requestAnimationFrame(frame);
+      } else {
+        el.textContent = targetWord;
+      }
+    }
+    el._scrambleRaf = requestAnimationFrame(frame);
+  }
+
+  if (headerEl) {
+    let wasScrolled = false;
+    window.addEventListener('scroll', () => {
+      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const midField = maxScroll * MID_FIELD_RATIO;
+      const isScrolled = window.scrollY > midField;
+      if (isScrolled !== wasScrolled) {
+        wasScrolled = isScrolled;
+        scrambleTo(suffixEl, isScrolled ? SHORT_NAME : FULL_NAME, FULL_NAME.length, SCRAMBLE_DURATION);
+      }
+    }, { passive: true });
+  }
 </script>
 
 </body>
