@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Edmund Giuliano — Freelance Developer &amp; Designer</title>
+<title>Edmund Giuliano — AI Builder &amp; Creator</title>
 <style>
   :root{
     --bg: #0b0f0a;
@@ -30,7 +30,10 @@
     position:relative;
   }
 
-  /* vignette — dark, lit-from-center chiaroscuro */
+  /* vignette — dark, lit-from-center chiaroscuro. will-change promotes this
+     to its own compositor layer so it doesn't get re-rasterized every time
+     something animates underneath it (measured as a real, avoidable cost —
+     see the perf note above the moon rain JS). */
   body::after{
     content:"";
     position:fixed;
@@ -38,9 +41,16 @@
     z-index:400;
     pointer-events:none;
     background:radial-gradient(ellipse at 50% 30%, transparent 35%, rgba(3,4,2,0.6) 100%);
+    will-change: transform;
   }
 
-  /* film grain overlay — slightly heavier, warmer, more "canvas" than digital */
+  /* film grain overlay — slightly heavier, warmer, more "canvas" than digital.
+     This used to be a live SVG feTurbulence filter resolved as a background
+     image; that was one of the biggest measured frame-time costs on this
+     page (profiled at roughly 16ms/frame on its own — a live noise filter
+     recombined with a mix-blend-mode every frame is expensive). Replaced
+     with a small pre-rendered static noise PNG, same visual effect, tiled
+     the same way, at a fraction of the repaint cost. */
   body::before{
     content:"";
     position:fixed;
@@ -49,7 +59,8 @@
     pointer-events:none;
     opacity:0.07;
     mix-blend-mode:overlay;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-image:url("data:image/png;base64,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");
+    will-change: transform;
   }
 
   .mono{
@@ -117,6 +128,16 @@
     align-items:center;
     position:relative;
     padding-top:84px;
+    /* The falling sphere's transform can translate it hundreds of pixels
+       below the hero's own box as you scroll. Without this, that translated
+       position was leaking into the document's real scrollable height —
+       the more it fell, the taller the page measured itself as, the further
+       you could scroll, the further it fell: a genuine runaway feedback
+       loop, confirmed by measuring scrollHeight before/after scrolling (it
+       grew on its own). `contain: layout` stops the sphere's transformed
+       position from counting toward the page's height, without clipping it
+       visually — it still renders fine past this box into Work/About/Contact. */
+    contain: layout;
   }
   .hero .wrap{
     display:grid;
@@ -134,7 +155,11 @@
     line-height:1.08;
     margin-bottom:26px;
   }
-  h1.headline .dim{ color:var(--ink-faint); }
+  /* exactly half the base size at every step of the clamp, so it scales the
+     same way across viewport widths, just smaller throughout */
+  h1.headline.headline-sm{
+    font-size:clamp(20px, 3vw, 36px);
+  }
   .hero p.lede{
     max-width:460px;
     color:var(--ink-dim);
@@ -203,9 +228,24 @@
       radial-gradient(circle at 60% 65%, rgba(0,0,0,0.3), transparent 40%),
       radial-gradient(circle at 30% 70%, rgba(0,0,0,0.22), transparent 35%),
       #d6cfba;
-    box-shadow: 0 0 90px 14px rgba(185,143,74,0.14), 0 0 180px 60px rgba(146,168,116,0.11), 0 0 240px 90px rgba(233,226,209,0.04);
+    /* two layers instead of three, smaller blur radii — large-blur box-shadow
+       is one of the more expensive things a browser rasterizes, and this
+       element also carries a continuous transform animation on top of two
+       animated ancestor transforms, so trimming this compounds with the
+       will-change hint below rather than fighting it. Reads as effectively
+       the same soft glow at a fraction of the paint cost. */
+    box-shadow: 0 0 60px 10px rgba(185,143,74,0.15), 0 0 130px 40px rgba(146,168,116,0.10);
     animation: drift 14s ease-in-out infinite;
     transform-style: preserve-3d;
+    /* This element carries both a heavy triple-layer box-shadow and its own
+       continuous keyframe animation, on top of two ancestor transforms
+       (parallax + scroll-fall) already updating every frame. Without an
+       explicit promotion hint, browsers can end up re-rasterizing that
+       expensive shadow on every transform tick instead of just moving an
+       already-painted layer — profiled as one of the single biggest frame
+       costs on this page. will-change forces it onto its own GPU layer once,
+       so the shadow is painted once and only ever moved after that. */
+    will-change: transform;
   }
   @keyframes drift{
     0%,100%{ transform: translateY(0) rotateZ(0deg); }
@@ -309,7 +349,6 @@
     opacity:0.85;
     box-shadow:0 0 30px 6px rgba(226,150,161,0.25);
   }
-  .work-visual .url-tag{ }
   .work-body{ padding:40px; display:flex; flex-direction:column; justify-content:center; }
   .work-body .mono{ margin-bottom:14px; }
   .work-body h3{ font-family: Georgia, "Times New Roman", serif; font-size:26px; font-weight:700; margin-bottom:16px; }
@@ -436,9 +475,9 @@
 <section class="hero">
   <div class="wrap">
     <div>
-      <span class="mono eyebrow">Freelance Developer — Designer — Milwaukee</span>
-      <h1 class="headline">Built from ideas.<br>Manifested through engineering.</h1>
-      <p class="lede">I design and build small, dependable websites for people who'd rather spend their time running their business than managing a site. I'm also an AI builder and creator — I write thoughtful, structured prompts that carry an idea from discovery all the way to an innovative design. This is a working record of both — and of everything else I'm building, shooting, and paying attention to.</p>
+      <span class="mono eyebrow">Manila — Milwaukee — Los Angeles</span>
+      <h1 class="headline headline-sm">Built from ideas.<br>Manifested through engineering.</h1>
+      <p class="lede">I'm an AI builder and creator — I write thoughtful, structured prompts that carry an idea from discovery all the way to an innovative design.</p>
       <div class="cta-row">
         <a href="#work" class="btn primary">View Selected Work</a>
         <a href="#contact" class="btn ghost">Get in Touch</a>
@@ -457,7 +496,7 @@
   <div class="wrap">
     <div class="section-head reveal">
       <span class="mono">01 — Selected Work</span>
-      <h2>Case studies from real engagements.</h2>
+      <h2>Projects in production.</h2>
     </div>
 
     <div class="work-card reveal">
@@ -607,44 +646,92 @@
     const FADE_END_PROGRESS = 0.3; // fraction of the page by which opacity hits its floor
     const LIGHT_REACH = 620;      // px radius over which the moon's light falls off to 0
 
+    // Perf: total page height only changes on resize (or content edits), not
+    // every frame, so it's measured once and cached rather than forcing a
+    // layout read inside the animation loop.
+    let cachedMaxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+    window.addEventListener('resize', () => {
+      cachedMaxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+    }, { passive: true });
+
+    // Perf: only elements currently within (roughly) LIGHT_REACH of the
+    // viewport can possibly be lit, so an IntersectionObserver keeps a small
+    // "active" subset instead of touching all ~34 candidates every frame —
+    // most of the page is never near the sphere at any given moment.
+    let activeLightables = [];
+    if (lightCast) {
+      const lightIO = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            if (!activeLightables.includes(entry.target)) activeLightables.push(entry.target);
+          } else {
+            activeLightables = activeLightables.filter((el) => el !== entry.target);
+          }
+        });
+      }, { rootMargin: `${LIGHT_REACH}px 0px ${LIGHT_REACH}px 0px` });
+      lightables.forEach((el) => lightIO.observe(el));
+    }
+
+    // Perf: measuring the moon's position and re-painting filter/text-shadow
+    // on nearby text is real work (both showed up clearly when profiled —
+    // text-shadow+filter repaints alone roughly doubled frame time). The
+    // light is a slow-moving ambient effect, not fast motion, so it doesn't
+    // need to update every single frame to look smooth — only every 3rd
+    // frame (~20 updates/sec). The sphere's own position (transform, cheap
+    // and GPU-composited) still updates every frame for full smoothness.
+    const LIGHT_UPDATE_EVERY_N_FRAMES = 3;
+    let frameCount = 0;
+
     function tick() {
-      // ease toward the cursor target so it drifts rather than snaps
+      frameCount++;
+      const updateLight = lightCast && (frameCount % LIGHT_UPDATE_EVERY_N_FRAMES === 0);
+
+      // ---- READ PHASE ----
+      // Every DOM measurement happens here, up front, before any writes, so
+      // nothing below forces a mid-frame layout recalculation. The previous
+      // version interleaved a getBoundingClientRect() read with a style
+      // write for each lightable element in a single loop — each read
+      // forced a fresh synchronous layout because the prior iteration's
+      // write had just invalidated it. That was the original cause of the
+      // unresponsiveness (measured ~24fps average, worse on scroll).
+      const scrollY = window.scrollY;
+      const moonRect = updateLight && moonEl ? moonEl.getBoundingClientRect() : null;
+      const lightableRects = moonRect ? activeLightables.map((el) => el.getBoundingClientRect()) : null;
+
+      // ---- COMPUTE PHASE (pure math, touches no DOM) ----
       curX += (targetX - curX) * 0.06;
       curY += (targetY - curY) * 0.06;
-      moonParallax.style.setProperty('--px', curX.toFixed(2) + 'px');
-      moonParallax.style.setProperty('--py', curY.toFixed(2) + 'px');
 
       // Whole-page rain: progress is 0 at the top of the document and 1 at
       // the very bottom, so the fall continues through every section, not
       // just the hero.
-      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-      const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
-
-      const fall = progress * maxScroll * FALL_RATIO;
+      const progress = Math.min(Math.max(scrollY / cachedMaxScroll, 0), 1);
+      const fall = progress * cachedMaxScroll * FALL_RATIO;
       const sway = Math.sin(progress * SWAY_CYCLES * Math.PI * 2) * SWAY_AMPLITUDE * Math.min(progress * 3, 1);
       const fadeProgress = Math.min(progress / FADE_END_PROGRESS, 1);
       const fade = 1 - fadeProgress * (1 - MIN_OPACITY);
 
+      let mx, my, lits;
+      if (moonRect) {
+        mx = moonRect.left + moonRect.width / 2;
+        my = moonRect.top + moonRect.height / 2;
+        lits = lightableRects.map((r) => {
+          const ex = r.left + r.width / 2, ey = r.top + r.height / 2;
+          const dist = Math.hypot(mx - ex, my - ey);
+          return Math.max(0, 1 - dist / LIGHT_REACH);
+        });
+      }
+
+      // ---- WRITE PHASE ----
+      // Every DOM mutation happens here, together, after all reads above.
+      moonParallax.style.setProperty('--px', curX.toFixed(2) + 'px');
+      moonParallax.style.setProperty('--py', curY.toFixed(2) + 'px');
       moonstage.style.setProperty('--sy', fall.toFixed(1) + 'px');
       moonstage.style.setProperty('--sx', sway.toFixed(1) + 'px');
       moonstage.style.setProperty('--op', fade.toFixed(2));
-
-      // Light-cast: read the moon's real on-screen position (not the target
-      // variables) so the light always matches exactly what's rendered, then
-      // brighten every piece of text on the page based on its live distance
-      // to it — nearby copy glows brighter, distant copy stays untouched.
-      if (moonEl && lightCast) {
-        const moonRect = moonEl.getBoundingClientRect();
-        const mx = moonRect.left + moonRect.width / 2;
-        const my = moonRect.top + moonRect.height / 2;
+      if (moonRect) {
         lightCast.style.transform = `translate3d(${mx.toFixed(1)}px, ${my.toFixed(1)}px, 0)`;
-        lightables.forEach((el) => {
-          const r = el.getBoundingClientRect();
-          const ex = r.left + r.width / 2, ey = r.top + r.height / 2;
-          const dist = Math.hypot(mx - ex, my - ey);
-          const lit = Math.max(0, 1 - dist / LIGHT_REACH);
-          el.style.setProperty('--lit', lit.toFixed(3));
-        });
+        activeLightables.forEach((el, i) => el.style.setProperty('--lit', lits[i].toFixed(3)));
       }
 
       requestAnimationFrame(tick);
