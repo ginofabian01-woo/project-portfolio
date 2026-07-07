@@ -217,21 +217,23 @@
   .hero p.lede{
     max-width:460px;
     color:var(--ink-dim);
-    font-size:17px;
+    font-size:15px;
     margin-bottom:34px;
   }
   .cta-row{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
   .btn{
     display:inline-flex;
     align-items:center;
+    justify-content:center;
     gap:8px;
-    padding:14px 24px;
+    padding:14px 18px;
     border:1px solid var(--hair);
     border-radius:2px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size:11px;
     letter-spacing:0.14em;
     text-transform:uppercase;
+    white-space:nowrap;
     transition: all .25s ease;
   }
   .btn.primary{ background:var(--ink); color:var(--bg); border-color:var(--ink); }
@@ -386,28 +388,28 @@
   }
   .work-visual{
     position:relative;
-    min-height:280px;
+    min-height:180px;
     background:
       linear-gradient(160deg, #171a12 0%, var(--bg-panel) 60%),
       radial-gradient(circle at 70% 30%, rgba(185,143,74,0.14), transparent 55%);
     display:flex;
     align-items:flex-end;
-    padding:24px;
+    padding:18px;
   }
   .work-visual .swatch{
     position:absolute;
-    top:24px; left:24px;
-    width:34px; height:34px;
+    top:18px; left:18px;
+    width:28px; height:28px;
     border-radius:50%;
     background:#e296a1;
     opacity:0.85;
     box-shadow:0 0 30px 6px rgba(226,150,161,0.25);
   }
-  .work-body{ padding:40px; display:flex; flex-direction:column; justify-content:center; }
-  .work-body .mono{ margin-bottom:14px; }
-  .work-body h3{ font-family: Georgia, "Times New Roman", serif; font-size:26px; font-weight:700; margin-bottom:16px; }
-  .work-body p{ color:var(--ink-dim); font-size:15px; margin-bottom:22px; }
-  .tag-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:26px; }
+  .work-body{ padding:28px; display:flex; flex-direction:column; justify-content:center; }
+  .work-body .mono{ margin-bottom:10px; }
+  .work-body h3{ font-family: Georgia, "Times New Roman", serif; font-size:22px; font-weight:700; margin-bottom:12px; }
+  .work-body p{ color:var(--ink-dim); font-size:14px; margin-bottom:16px; }
+  .tag-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:18px; }
   .tag{
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size:10px;
@@ -415,7 +417,7 @@
     text-transform:uppercase;
     color:var(--ink-dim);
     border:1px solid var(--hair);
-    padding:6px 10px;
+    padding:5px 9px;
   }
   .work-link{
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
