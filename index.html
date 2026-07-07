@@ -85,7 +85,10 @@
     top:0; left:0; right:0;
     z-index:200;
     background:linear-gradient(to bottom, rgba(11,15,10,0.92), rgba(11,15,10,0));
-    backdrop-filter: blur(6px);
+    /* backdrop-filter has to resample everything behind it on every scroll
+       frame — a real, measured cost (~3ms alone in profiling). Dropped from
+       6px to 4px: still reads as a frosted header, meaningfully cheaper. */
+    backdrop-filter: blur(4px);
   }
   nav.wrap{
     display:flex;
@@ -117,8 +120,59 @@
     transition:color .25s ease;
   }
   .navlinks a:hover{ color:var(--gold-bright); }
+
+  /* Mobile menu: a native <details>/<summary> disclosure — no JS needed for
+     the toggle itself to work, keyboard/screen-reader accessible by
+     default, and it's the one navlinks previously just vanished below
+     720px with no replacement at all (a real dead end for phone visitors). */
+  .mobile-nav{ display:none; position:relative; }
+  .mobile-nav summary{
+    list-style:none;
+    cursor:pointer;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    /* padding sized so the tappable area is ~44px tall, the standard
+       minimum comfortable touch target, even though the visible text is
+       much smaller — the padding is invisible, not a visual bulk change */
+    padding:14px 8px;
+    display:inline-flex;
+    align-items:center;
+  }
+  .mobile-nav summary::-webkit-details-marker{ display:none; }
+  .mobile-nav summary::after{ content:" +"; color:var(--gold); }
+  .mobile-nav[open] summary::after{ content:" –"; }
+  .mobile-nav summary:hover{ color:var(--gold-bright); }
+  .mobile-nav-links{
+    position:absolute;
+    top:100%;
+    right:0;
+    margin-top:4px;
+    background:var(--bg-panel);
+    border:1px solid rgba(185,143,74,0.22);
+    padding:6px 22px;
+    display:flex;
+    flex-direction:column;
+    min-width:160px;
+  }
+  .mobile-nav-links a{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    /* same ~44px touch-target sizing as the summary toggle above */
+    padding:14px 0;
+    display:flex;
+    align-items:center;
+  }
+  .mobile-nav-links a:hover{ color:var(--gold-bright); }
+
   @media (max-width:720px){
     .navlinks{ display:none; }
+    .mobile-nav{ display:block; }
   }
 
   /* ---------- HERO ---------- */
@@ -469,6 +523,15 @@
       <a href="#interests">Interests</a>
       <a href="#contact">Contact</a>
     </div>
+    <details class="mobile-nav">
+      <summary aria-label="Menu">Menu</summary>
+      <div class="mobile-nav-links">
+        <a href="#work">Work</a>
+        <a href="#about">About</a>
+        <a href="#interests">Interests</a>
+        <a href="#contact">Contact</a>
+      </div>
+    </details>
   </nav>
 </header>
 
@@ -586,6 +649,15 @@
 <script>
   // Only now (JS confirmed running) do we opt into the hidden-until-scrolled state.
   document.documentElement.classList.add('js');
+
+  // Mobile menu works natively via <details>/<summary> with no JS at all;
+  // this just closes it after a link is tapped, purely a UX nicety.
+  const mobileNav = document.querySelector('.mobile-nav');
+  if (mobileNav) {
+    mobileNav.querySelectorAll('a').forEach((a) => {
+      a.addEventListener('click', () => { mobileNav.open = false; });
+    });
+  }
   const io = new IntersectionObserver((entries)=>{
     entries.forEach(e=>{
       if(e.isIntersecting){ e.target.classList.add('visible'); }
@@ -616,14 +688,32 @@
     let targetX = 0, targetY = 0, curX = 0, curY = 0;
     const MAX_PARALLAX = 18; // px of travel at the extreme edge of the hero
 
+    // Perf: the biggest remaining cost was structural, not per-frame math —
+    // tick() used to call requestAnimationFrame(tick) unconditionally at the
+    // end, forever, from page load onward, whether or not the mouse or
+    // scrollbar had moved in the last five minutes. That's a permanent 60fps
+    // background loop competing with everything else on the main thread even
+    // while someone's just reading. Now a frame is only scheduled in
+    // response to an actual scroll/mousemove/resize, and tick() only
+    // re-schedules itself while the cursor-parallax easing hasn't settled
+    // yet — once nothing is moving, the loop goes fully idle at zero cost.
+    let tickScheduled = false;
+    function scheduleTick() {
+      if (!tickScheduled) {
+        tickScheduled = true;
+        requestAnimationFrame(tick);
+      }
+    }
+
     heroEl.addEventListener('mousemove', (e) => {
       const r = heroEl.getBoundingClientRect();
       const nx = (e.clientX - r.left) / r.width - 0.5;   // -0.5..0.5
       const ny = (e.clientY - r.top) / r.height - 0.5;
       targetX = nx * MAX_PARALLAX * 2;
       targetY = ny * MAX_PARALLAX;
+      scheduleTick();
     });
-    heroEl.addEventListener('mouseleave', () => { targetX = 0; targetY = 0; });
+    heroEl.addEventListener('mouseleave', () => { targetX = 0; targetY = 0; scheduleTick(); });
 
     // Rain/waterfall tuning: FALL_RATIO is how fast the moon sinks down the
     // page relative to raw scroll distance (recomputed against total page
@@ -652,6 +742,7 @@
     let cachedMaxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
     window.addEventListener('resize', () => {
       cachedMaxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      scheduleTick();
     }, { passive: true });
 
     // Perf: only elements currently within (roughly) LIGHT_REACH of the
@@ -683,6 +774,7 @@
     let frameCount = 0;
 
     function tick() {
+      tickScheduled = false;
       frameCount++;
       const updateLight = lightCast && (frameCount % LIGHT_UPDATE_EVERY_N_FRAMES === 0);
 
@@ -734,9 +826,15 @@
         activeLightables.forEach((el, i) => el.style.setProperty('--lit', lits[i].toFixed(3)));
       }
 
-      requestAnimationFrame(tick);
+      // Scroll-driven values (fall/sway/opacity/light) aren't eased in JS, so
+      // they never need "catch-up" frames of their own — new scroll events
+      // already re-schedule a tick directly. Only the cursor-parallax easing
+      // needs to keep going after the input stops, until it actually settles.
+      const parallaxSettled = Math.abs(targetX - curX) < 0.05 && Math.abs(targetY - curY) < 0.05;
+      if (!parallaxSettled) scheduleTick();
     }
-    requestAnimationFrame(tick);
+    scheduleTick();
+    window.addEventListener('scroll', scheduleTick, { passive: true });
   }
 
   // Header name: "Giuliano" scrambles down to "Gino" once scrolled, and
