@@ -110,6 +110,20 @@
     align-items:center;
     justify-content:space-between;
     height:84px;
+    transition:height .3s ease;
+  }
+  /* Scroll-aware header: once scrolled, the nav compacts and the frosted
+     backdrop firms up slightly for legibility over whatever content is
+     now behind it (no longer just the hero). Toggled by the same
+     scroll listener that already drives the brand-name scramble below --
+     see scrambleCheck() -- so this adds zero new event listeners. */
+  header.scrolled{
+    background:linear-gradient(to bottom, rgba(11,15,10,0.97), rgba(11,15,10,0.86));
+    backdrop-filter: blur(6px);
+  }
+  header.scrolled nav.wrap{ height:64px; }
+  @media (prefers-reduced-motion: reduce){
+    nav.wrap{ transition:none; }
   }
   .brand{
     position:relative;
@@ -599,10 +613,10 @@
 <section class="hero">
   <div class="wrap">
     <div>
-      <span class="mono eyebrow">Manila — Milwaukee — Los Angeles</span>
-      <h1 class="headline headline-sm">Built from ideas.<br>Manifested through engineering.</h1>
-      <p class="lede">I'm an AI builder and creator — I write thoughtful, structured prompts that carry an idea from discovery all the way to an innovative design.</p>
-      <div class="cta-row">
+      <span class="mono eyebrow reveal" style="transition-delay:0ms">Manila — Milwaukee — Los Angeles</span>
+      <h1 class="headline headline-sm reveal" style="transition-delay:120ms">Built from ideas.<br>Manifested through engineering.</h1>
+      <p class="lede reveal" style="transition-delay:240ms">I'm an AI builder and creator — I write thoughtful, structured prompts that carry an idea from discovery all the way to an innovative design.</p>
+      <div class="cta-row reveal" style="transition-delay:360ms">
         <a href="#work" class="btn primary">View Selected Work</a>
         <a href="#contact" class="btn ghost">Get in Touch</a>
       </div>
@@ -1077,11 +1091,26 @@
     // once per frame, matching the moon effect's discipline and confirmed
     // via re-tracing to meaningfully cut total forced-layout events during
     // active scrolling.
+    // Header shrink uses a much smaller threshold than the mid-field name
+    // scramble above -- it should react almost immediately on scroll, not
+    // wait until the user is halfway down the page. Tracked with its own
+    // "was" flag so the class is only touched on an actual state change,
+    // same discipline as the scramble check.
+    const HEADER_SHRINK_THRESHOLD = 40; // px
+    let wasHeaderScrolled = false;
     let scrambleTickScheduled = false;
     function scrambleCheck() {
       scrambleTickScheduled = false;
+      const scrollY = window.scrollY;
+
+      const isHeaderScrolled = scrollY > HEADER_SHRINK_THRESHOLD;
+      if (isHeaderScrolled !== wasHeaderScrolled) {
+        wasHeaderScrolled = isHeaderScrolled;
+        headerEl.classList.toggle('scrolled', isHeaderScrolled);
+      }
+
       const midField = cachedMaxScrollForScramble * MID_FIELD_RATIO;
-      const isScrolled = window.scrollY > midField;
+      const isScrolled = scrollY > midField;
       if (isScrolled !== wasScrolled) {
         wasScrolled = isScrolled;
         scrambleTo(suffixEl, isScrolled ? SHORT_NAME : FULL_NAME, FULL_NAME.length, SCRAMBLE_DURATION);
